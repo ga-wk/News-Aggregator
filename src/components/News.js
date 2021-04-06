@@ -12,7 +12,7 @@ export const News = (props) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 10,
     backgroundColor: "#6922ee",
     alignItems: "center",
     justifyContent: "center",
