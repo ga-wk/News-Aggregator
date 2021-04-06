@@ -3,6 +3,7 @@ node_modules/**/*
 .expo-shared/*
 .vscode/*
 .assets/*
+*.css
 npm-debug.*
 *.jks
 *.p8
