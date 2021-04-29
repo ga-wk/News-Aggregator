@@ -1,22 +1,21 @@
 import React from "react";
 
 import "react-native-gesture-handler";
-import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
 
-import { NewsScreen } from "./screens/NewsScreen";
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { NavigationContainer } from '@react-navigation/native';
 import { FavoriteScreen } from "./screens/FavoriteScreen";
-
-const Stack = createStackNavigator();
+import { NewsScreen } from "./screens/NewsScreen";
+const Drawer = createDrawerNavigator();
 
 export const Index = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="News" component={NewsScreen} />
-        <Stack.Screen name="Favorite" component={FavoriteScreen} />
-        {/* <Stack.Screen name="City" /> */}
-      </Stack.Navigator>
+      <Drawer.Navigator initialRouteName="Новости">
+        <Drawer.Screen name="Новости" component={NewsScreen} >
+        </Drawer.Screen>
+        <Drawer.Screen name="Избранные" component={FavoriteScreen } />
+      </Drawer.Navigator>
     </NavigationContainer>
   );
 };
