@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, Button, FlatList } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  FlatList,
+  TextInput,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 
 const Item = ({ title }) => (
@@ -27,20 +34,26 @@ export const News = (props) => {
   const categoriesClick = (e) => {
     setCategoriesVisible(!categoriesVisible);
   };
-  let visibleClass = (categoriesVisible ? styles.open : styles.close)
+  let visibleClass = categoriesVisible ? styles.open : styles.close;
   return (
     <View style={styles.container}>
-      <Button title={"Категории"} onPress={categoriesClick} />
-
       <FlatList
-        // hidden={categoriesVisible})
-        style={[styles.menu,  visibleClass]}
+        style={[styles.menu, visibleClass]}
         data={DATA}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
       />
 
-      <Text>News</Text>
+      <View style={styles.filter}>
+        <TextInput />
+        <Button title={"поиск"} />
+        <Text>Категории</Text>
+        <Button title={"Категории"} onPress={categoriesClick} />
+      </View>
+
+      <View style={styles.content}>
+        <Text>News</Text>
+      </View>
     </View>
   );
 };
@@ -48,9 +61,11 @@ export const News = (props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 10,
-    backgroundColor: "#6922ee",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "column",
+  },
+  filter: {
+    justifyContent: "space-between",
+    flexDirection: "row",
   },
   open: {
     position: "absolute",
@@ -61,8 +76,8 @@ const styles = StyleSheet.create({
   },
   menu: {
     width: 100,
-    top: 0,
-    right:0,
+    top: 35,
+    right: 0,
     backgroundColor: "#fff",
   },
 });
