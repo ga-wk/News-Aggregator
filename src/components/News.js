@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,17 +6,54 @@ import {
   Button,
   FlatList,
   TextInput,
+  Image,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { Card } from "react-native-elements";
 
 const Item = ({ title }) => (
   <View style={styles.item}>
     <Button title={title} style={styles.title} />
   </View>
 );
+
+const NewsItem = ({ title, urlToImage, description }) => (
+
+  <Card>
+    <Card.Title>{title}</Card.Title>
+    <Card.Divider/>
+    <Card.Image  source={{uri:urlToImage}}/>
+    <Card.Divider/>
+    <Text style={{ marginBottom: 10 }}>{description}</Text>
+  </Card>
+);
+
+const renderNewsItem = ({ item }) => (
+  <NewsItem
+    title={item["title"]}
+    urlToImage={item["urlToImage"]}
+    description={item["description"]}
+  />
+);
 const renderItem = ({ item }) => <Item title={item.title} />;
+
 export const News = (props) => {
   const [categoriesVisible, setCategoriesVisible] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [news, setNews] = useState(null);
+
+  const url =
+    "https://newsapi.org/v2/top-headlines?country=ru&pageSize=10&apiKey=1c0f29e3b4504430822fb18fd64d6988";
+  const req = new Request(url);
+
+  useEffect(() => {
+    fetch(req)
+      .then((res) => res.json())
+      .then((data) => {
+        setNews(data);
+      })
+      .then(setIsLoaded(true));
+  }, [isLoaded]);
+
   const DATA = [
     {
       id: "bd7acbea-c1b1-46c2-aed5-3ad53abb28ba",
@@ -50,9 +87,16 @@ export const News = (props) => {
         <Text>Категории</Text>
         <Button title={"Категории"} onPress={categoriesClick} />
       </View>
-
       <View style={styles.content}>
-        <Text>News</Text>
+        {isLoaded && news ? (
+          <FlatList
+            data={news["articles"]}
+            renderItem={renderNewsItem}
+            keyExtractor={(item) => item["title"]}
+          />
+        ) : (
+          <Text>Загрузка</Text>
+        )}
       </View>
     </View>
   );
