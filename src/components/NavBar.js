@@ -25,7 +25,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#000",
 
-    padding: 15,
+    paddingTop: 15,
+    paddingLeft:10,
   },
 
   btn: {
@@ -38,5 +39,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     width: "100%",
     textAlign: "center",
+    color:"#fff"
   },
 });

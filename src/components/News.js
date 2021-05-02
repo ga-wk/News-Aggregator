@@ -29,7 +29,7 @@ export const News = (props) => {
   const [curCategory, setCurCategory] = useState(all);
   const [curEndpoint, setCurEndpoint] = useState(everything);
   const newsList = useRef(null);
-  
+
   const size = 10;
   const country = "ru";
 
@@ -121,7 +121,6 @@ export const News = (props) => {
     const promisNews = createPromis(url);
     const res = await promisNews;
     const data = await res.json();
-    setNews(data);
     return data;
   };
 
@@ -169,7 +168,10 @@ export const News = (props) => {
         country: country,
         apiKey: key,
       });
-      promis.then(setIsLoaded(true));
+      promis.then((data) => {
+        setNews(data);
+        setIsLoaded(true);
+      });
     }
   }, [isLoaded]);
 
@@ -198,18 +200,26 @@ export const News = (props) => {
             renderItem={renderNewsItem}
             keyExtractor={(item, index) => index.toString()}
             onEndReached={() => {
-              getNews({
-                endpoint: curEndpoint,
-                category: curCategory,
-                domains: ["tvrain.ru"],
-                page: page + 1,
-                pageSize: size,
-                country: country,
-                apiKey: key,
-              });
-              setPage(page + 1);
-              // console.log("newsList",newsList)
-              newsList.current.scrollToIndex({ animated: true, index: 0 });
+              if (news.totalResults > page * size) {
+                getNews({
+                  endpoint: curEndpoint,
+                  category: curCategory,
+                  domains: ["tvrain.ru"],
+                  page: page + 1,
+                  pageSize: size,
+                  country: country,
+                  apiKey: key,
+                }).then((data) => {
+                  const newNews = news;
+                  newNews["articles"].push(...data["articles"]);
+                  setNews(newNews);
+                  setPage(page + 1);
+                  newsList.current.scrollToIndex({
+                    animated: false,
+                    index: page * 7,
+                  });
+                });
+              }
             }}
           />
         ) : (
