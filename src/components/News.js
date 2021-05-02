@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
 } from "react-native";
-
 import { Card } from "react-native-elements";
 import {
   everything,
@@ -19,23 +18,55 @@ import {
   all,
   btnCategories,
 } from "../strings/stringNew";
-import { key } from "../strings/public";
+import { key , allSources } from "../strings/public";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 export const News = (props) => {
+  //style
   const [categoriesVisible, setCategoriesVisible] = useState(false);
+  const newsList = useRef(null);
+
+  //news
   const [isLoaded, setIsLoaded] = useState(false);
   const [news, setNews] = useState(false);
   const [page, setPage] = useState(1);
   const [curCategory, setCurCategory] = useState(all);
   const [curEndpoint, setCurEndpoint] = useState(everything);
-  const newsList = useRef(null);
 
+  //пока так
   const size = 10;
   const country = "ru";
+
+  // date
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
+  const [mode, setMode] = useState("date");
+  const [show, setShow] = useState(false);
+
+  //search
+  const searchInput = useRef(null);
+  const [input, setInput] = useState(undefined);
+
+  const onChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShow(Platform.OS === "ios");
+    setDate(currentDate);
+  };
+
+  const showMode = (currentMode) => {
+    setShow(true);
+    setMode(currentMode);
+  };
+
+  const showDatepicker = () => {
+    showMode("date");
+  };
 
   const createUrl = ({
     endpoint,
     q,
+    from,
+    to,
     domains,
     category,
     page,
@@ -45,6 +76,11 @@ export const News = (props) => {
   }) => {
     switch (endpoint) {
       case everything:
+        console.log("qqqqqqqqqqqqqqq", q);
+        if (q) {
+          console.log("qqqqqqqqqqqqqqq", q);
+          return `https://newsapi.org/v2/${everything}?q=${q}&from=${from}to=${to}&&domains=${domains}&page=${page}&pageSize=${pageSize}&language=${country}&apiKey=${apiKey}`;
+        }
         return `https://newsapi.org/v2/${everything}?domains=${domains}&page=${page}&pageSize=${pageSize}&language=${country}&apiKey=${apiKey}`;
       case topHeadlines:
         return `https://newsapi.org/v2/${topHeadlines}?category=${category}&page=${page}&pageSize=${pageSize}&country=${country}&apiKey=${apiKey}`;
@@ -107,7 +143,6 @@ export const News = (props) => {
     country = "ru",
     apiKey = key
   ) => {
-    console.log("req");
     const url = createUrl(
       endpoint,
       q,
@@ -121,6 +156,7 @@ export const News = (props) => {
     const promisNews = createPromis(url);
     const res = await promisNews;
     const data = await res.json();
+    console.log("req", data.status);
     return data;
   };
 
@@ -135,7 +171,7 @@ export const News = (props) => {
       getNews({
         endpoint: everything,
         category: curCategory,
-        domains: ["tvrain.ru"],
+        domains: allSources,
         page: page,
         pageSize: size,
         country: country,
@@ -155,6 +191,24 @@ export const News = (props) => {
     }
   };
 
+  const searching = () => {
+    setCurCategory("all");
+    setPage(1);
+    getNews({
+      endpoint: everything,
+      category: curCategory,
+      q: input,
+      from: fromDate,
+      to: toDate,
+      domains: allSources,
+      page: page,
+      pageSize: size,
+      country: country,
+      apiKey: key,
+    }).then((data) => setNews(data));
+    setCurEndpoint(everything);
+  };
+
   useEffect(() => {
     if (!isLoaded) {
       const size = 10;
@@ -162,7 +216,7 @@ export const News = (props) => {
       const promis = getNews({
         endpoint: curEndpoint,
         category: curCategory,
-        domains: ["tvrain.ru"],
+        domains: allSources,
         page: page,
         pageSize: size,
         country: country,
@@ -184,14 +238,47 @@ export const News = (props) => {
         keyExtractor={(item, index) => index.toString()}
       />
 
+      {show && (
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={date}
+          mode={mode}
+          is24Hour={true}
+          display="default"
+          onChange={onChange}
+        />
+      )}
+
       <View style={styles.filter}>
-        <TextInput />
-        <Button title={"поиск"} />
-        <Text>
-          {categories.filter((v) => v.category === curCategory)[0].nameCategory}
-        </Text>
-        <Button title={btnCategories} onPress={categoriesClick} />
+        <View style={styles.categories}>
+          <Text>
+            {
+              categories.filter((v) => v.category === curCategory)[0]
+                .nameCategory
+            }
+          </Text>
+          <Button title={btnCategories} onPress={categoriesClick} />
+        </View>
+
+        <View style={styles.searchForm}>
+          <TextInput
+            ref={searchInput}
+            onChangeText={(text) => setInput(text)}
+            value={input}
+            style={styles.searchInput}
+          />
+          <Button
+            onPress={showDatepicker}
+            title={`от ${fromDate.getDate()}-${fromDate.getMonth()}`}
+          />
+          <Button
+            onPress={showDatepicker}
+            title={`до ${toDate.getDate()}-${toDate.getMonth()}`}
+          />
+          <Button onPress={searching} title={"поиск"} />
+        </View>
       </View>
+
       <View style={styles.content}>
         {isLoaded && news ? (
           <FlatList
@@ -204,7 +291,10 @@ export const News = (props) => {
                 getNews({
                   endpoint: curEndpoint,
                   category: curCategory,
-                  domains: ["tvrain.ru"],
+                  q: input,
+                  from: fromDate,
+                  to: toDate,
+                  domains: allSources,
                   page: page + 1,
                   pageSize: size,
                   country: country,
@@ -239,8 +329,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   filter: {
-    justifyContent: "space-between",
-    flexDirection: "row",
+    flexDirection: "column",
   },
   open: {
     position: "absolute",
@@ -261,5 +350,19 @@ const styles = StyleSheet.create({
   },
   loading: {
     justifyContent: "center",
+  },
+  searchForm: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#000",
+  },
+  searchInput: {
+    width: "50%",
+  },
+  categories: {
+    justifyContent: "space-between",
+    flexDirection: "row",
+    alignItems: "center",
   },
 });
