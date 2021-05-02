@@ -118,16 +118,6 @@ export const News = (props) => {
     return fetch(req);
   };
 
-  const Item = ({ nameCategory, category }) => (
-    <View style={styles.item}>
-      <Button
-        title={nameCategory}
-        style={styles.title}
-        onPress={setNewCategory.bind(null, category)}
-      />
-    </View>
-  );
-
   const OpenURLButton = ({ url, children }) => {
     const handlePress = useCallback(async () => {
       // Checking if the link is supported for links with custom URL scheme.
@@ -174,6 +164,16 @@ export const News = (props) => {
       url={item["url"]}
       publishedAt={item["publishedAt"]}
     />
+  );
+
+  const Item = ({ nameCategory, category }) => (
+    <View style={styles.item}>
+      <Button
+        title={nameCategory}
+        style={styles.title}
+        onPress={setNewCategory.bind(null, category)}
+      />
+    </View>
   );
 
   const renderItem = ({ item }) => (

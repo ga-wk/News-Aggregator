@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, View, Button, Modal, FlatList } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View, Button } from "react-native";
 
 export const NavBar = (props) => {
   const menuClick = (e) => {
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     borderColor: "#000",
 
     paddingTop: 15,
-    paddingLeft:10,
+    paddingLeft: 10,
   },
 
   btn: {
@@ -39,6 +39,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     width: "100%",
     textAlign: "center",
-    color:"#fff"
+    color: "#fff",
   },
 });
