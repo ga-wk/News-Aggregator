@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,7 +7,9 @@ import {
   FlatList,
   TextInput,
   Button,
+  ActivityIndicator,
 } from "react-native";
+import { db } from "../localdb/db";
 
 export const allSources = [
   "rbc.ru",
@@ -19,61 +21,110 @@ export const allSources = [
   "tvrain.ru",
 ];
 
-const sources = {
-  ru: [
-    {
-      source: "rbc.ru",
-      isEnabled: true,
-    },
-    {
-      source: "news.google.com",
-      isEnabled: true,
-    },
-    {
-      source: "lenta.ru",
-      isEnabled: true,
-    },
-    {
-      source: "russian.rt.com",
-      isEnabled: true,
-    },
-    {
-      source: "www.rbc.ru",
-      isEnabled: true,
-    },
-    {
-      source: "meduza.io",
-      isEnabled: true,
-    },
-    {
-      source: "tvrain.ru",
-      isEnabled: true,
-    },
-  ],
-  en: [],
-};
-
-const toggleSwitch = () => setIsEnabled((previousState) => !previousState);
-
-const Item = ({ source, isEnabled }) => (
-  <View style={styles.item}>
-    <Text style={styles.text}>{source}</Text>
-    <Switch
-      trackColor={{ false: "#767577", true: "#81b0ff" }}
-      thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
-      ios_backgroundColor="#3e3e3e"
-      onValueChange={toggleSwitch}
-      value={isEnabled}
-    />
-    <Button title={"Удалить"} />
-  </View>
-);
-
-const renderItem = ({ item }) => (
-  <Item source={item.source} isEnabled={item.isEnabled} />
-);
-
 export const Favorite = (props) => {
+  const [sources, setSources] = useState(undefined);
+  const [setting, setSetting] = useState();
+  const [rerender, setRerender] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      db.findOne({ db: "setting" }, function (err, doc) {
+        if (doc !== null) {
+          setSetting(doc);
+          setSources(doc["countries"]);
+          setRerender(!rerender);
+          setIsLoaded(true);
+        }
+      });
+    }
+  }, [isLoaded]);
+
+  //update
+  const toggleSwitch = (value, source) => {
+    let tmpSetting = setting;
+    let tmpSources = sources["ru"].map((el) => {
+      if (el.source === source) {
+        return {
+          source: el.source,
+          isEnabled: value,
+        };
+      }
+      return {
+        source: el.source,
+        isEnabled: el.isEnabled,
+      };
+    });
+
+    tmpSetting["countries"][setting["defaultCountry"]] = tmpSources;
+    db.update(
+      { db: "setting" },
+      tmpSetting,
+      {},
+      function (err, numReplaced) {}
+    );
+    setSetting(tmpSetting);
+    setSources(tmpSetting["countries"]);
+    setRerender(!rerender);
+  };
+
+  //add
+  const [input, setInput] = useState(undefined);
+  const addSource = () => {
+    let tmpSetting = setting;
+    let tmpSources = sources["ru"];
+    tmpSources.push({ source: input, isEnabled: true });
+
+    tmpSetting["countries"][tmpSetting["defaultCountry"]] = tmpSources;
+    db.update(
+      { db: "setting" },
+      tmpSetting,
+      {},
+      function (err, numReplaced) {}
+    );
+    setSetting(tmpSetting);
+    setSources(tmpSetting["countries"]);
+    setRerender(!rerender);
+  };
+
+  //remove
+  const removeSource = (index) => {
+    let tmpSetting = setting;
+    let tmpSources = sources["ru"];
+    tmpSources.splice(index, 1);
+
+    tmpSetting["countries"][tmpSetting["defaultCountry"]] = tmpSources;
+
+    setSetting(tmpSetting);
+    setSources(tmpSetting["countries"]);
+
+    setRerender(!rerender);
+    db.update(
+      { db: "setting" },
+      tmpSetting,
+      {},
+      function (err, numReplaced) {}
+    );
+  };
+
+  const Item = ({ source, isEnabled, index }) => (
+    <View style={styles.item}>
+      <Text style={styles.text}>{source}</Text>
+      <Switch
+        trackColor={{ false: "#767577", true: "#81b0ff" }}
+        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
+        ios_backgroundColor="#3e3e3e"
+        onValueChange={(value) => toggleSwitch.apply(null, [value, source])}
+        value={isEnabled}
+      />
+      <Button onPress={removeSource.bind(null, index)} title={"Удалить"} />
+    </View>
+  );
+
+  const renderItem = ({ item, index }) => (
+    <Item index={index} source={item.source} isEnabled={item.isEnabled} />
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.addForm}>
@@ -81,13 +132,17 @@ export const Favorite = (props) => {
           onChangeText={(text) => setInput(text)}
           style={styles.addInput}
         />
-        <Button title={"Добавить"} />
+        <Button onPress={addSource} title={"Добавить"} />
       </View>
-      <FlatList
-        data={sources["ru"]}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-      />
+      {sources && isLoaded ? (
+        <FlatList
+          data={sources["ru"]}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+        />
+      ) : (
+        <ActivityIndicator />
+      )}
     </View>
   );
 };
@@ -108,6 +163,7 @@ const styles = StyleSheet.create({
     fontFamily: "Roboto",
     fontSize: 22,
     color: "#000",
+    width: 200,
   },
   addForm: {
     width: "100%",

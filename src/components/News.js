@@ -8,6 +8,9 @@ import {
   TextInput,
   ActivityIndicator,
   Linking,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView
 } from "react-native";
 import { Card } from "react-native-elements";
 import {
@@ -21,6 +24,11 @@ import {
 } from "../strings/stringNew";
 import { key, allSources } from "../strings/public";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { db } from "../localdb/db";
+
+const wait = (timeout) => {
+  return new Promise((resolve) => setTimeout(resolve, timeout));
+};
 
 export const News = (props) => {
   //style
@@ -34,10 +42,12 @@ export const News = (props) => {
 
   //news
   const [isLoaded, setIsLoaded] = useState(false);
+  const [rerender, setRerender] = useState(true);
   const [news, setNews] = useState(false);
   const [page, setPage] = useState(pageFirst);
   const [curCategory, setCurCategory] = useState(all);
   const [curEndpoint, setCurEndpoint] = useState(everything);
+  const [sources, setSources] = useState(undefined);
 
   // date
   const [fromDate, setFromDate] = useState(new Date());
@@ -269,27 +279,70 @@ export const News = (props) => {
   };
 
   useEffect(() => {
-    if (!isLoaded) {
-      const promis = getNews({
-        endpoint: curEndpoint,
-        category: curCategory,
-        domains: allSources,
-        from: fromDate,
-        to: toDate,
-        page: page,
-        pageSize: size,
-        country: country,
-        apiKey: key,
-      });
-      promis.then((data) => {
-        setNews(data);
-        setIsLoaded(true);
-      });
-    }
+    db.findOne({ db: "setting" }, function (err, doc) {
+      if (doc !== null) {
+        const tmpSources = [];
+        doc["countries"][doc["defaultCountry"]].forEach((el) => {
+          if (el["isEnabled"]) {
+            tmpSources.push(el["source"]);
+          }
+        });
+        const promis = getNews({
+          endpoint: curEndpoint,
+          category: curCategory,
+          domains: tmpSources,
+          from: fromDate,
+          to: toDate,
+          page: page,
+          pageSize: size,
+          country: country,
+          apiKey: key,
+        });
+        promis.then((data) => {
+          setNews(data)
+          setSources(tmpSources);
+          setIsLoaded(true);
+        });
+      }
+    });
   }, [isLoaded]);
+
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    db.findOne({ db: "setting" }, function (err, doc) {
+      if (doc !== null) {
+        const tmpSources = [];
+        doc["countries"][doc["defaultCountry"]].forEach((el) => {
+          if (el["isEnabled"]) {
+            tmpSources.push(el["source"]);
+          }
+        });
+        const promis = getNews({
+          endpoint: curEndpoint,
+          category: curCategory,
+          domains: tmpSources,
+          from: fromDate,
+          to: toDate,
+          page: page,
+          pageSize: size,
+          country: country,
+          apiKey: key,
+        });
+        promis.then((data) => {
+          setNews(data)
+          setSources(tmpSources);
+          setRefreshing(false);
+        });
+      }
+    });
+  }, [refreshing]);
 
   return (
     <View style={styles.container}>
+      <Text style={{ display: "none" }}>{sources}</Text>
+
       <FlatList
         style={[styles.menu, visibleClass]}
         data={categories}
@@ -349,6 +402,9 @@ export const News = (props) => {
             data={news["articles"]}
             renderItem={renderNewsItem}
             keyExtractor={(item, index) => index.toString()}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
             onEndReached={() => {
               if (news.totalResults > page * size) {
                 getNews({
@@ -377,7 +433,7 @@ export const News = (props) => {
           />
         ) : (
           <View style={styles.loading}>
-            <ActivityIndicator size="large" />
+            <Text>загрузка</Text>
           </View>
         )}
       </View>
@@ -429,5 +485,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flexDirection: "row",
     alignItems: "center",
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "pink",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

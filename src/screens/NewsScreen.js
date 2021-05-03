@@ -1,21 +1,21 @@
-import React from "react";
-import { StyleSheet, Text, View, Button } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import { NavBar } from "../components/NavBar";
 import { News } from "../components/News";
-import DropDownPicker from "react-native-dropdown-picker";
+import { db } from "../localdb/db";
 
 export const NewsScreen = (props) => {
+  
   return (
     <View style={styles.container}>
-      <NavBar screen={"Новости"} navigation={props.navigation}/>
-      <News />
+      <NavBar screen={"Новости"} navigation={props.navigation} />
+       <News />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-      flex: 1
+    flex: 1,
   },
 });
