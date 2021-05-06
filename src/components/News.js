@@ -6,16 +6,12 @@ import {
   Button,
   FlatList,
   TextInput,
-  ActivityIndicator,
   Linking,
   RefreshControl,
-  SafeAreaView,
-  ScrollView,
 } from "react-native";
 import { Card } from "react-native-elements";
 import {
   everything,
-  sources,
   topHeadlines,
   categories,
   general,
@@ -23,7 +19,6 @@ import {
   btnCategories,
   dateFrom,
   dateTo,
-  source,
   btnSearch,
   modeDate,
   newsUrlToImage,
@@ -32,8 +27,12 @@ import {
   newsPublishedAt,
   articles,
   newsTitle,
+  requestStatus,
+  requestMessage,
+  requestError,
+  dateSeparator,
 } from "../consts/new";
-import { key, allSources } from "../consts/public";
+import { key } from "../consts/public";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { db } from "../localdb/db";
 import {
@@ -44,11 +43,7 @@ import {
   sourceName,
 } from "../consts/db";
 
-const wait = (timeout) => {
-  return new Promise((resolve) => setTimeout(resolve, timeout));
-};
-
-export const News = (props) => {
+export const News = () => {
   //style
   const [categoriesVisible, setCategoriesVisible] = useState(false);
   const newsList = useRef(null);
@@ -57,6 +52,18 @@ export const News = (props) => {
   const pageFirst = 1;
   const size = 10;
   const country = "ru";
+
+  //заглушка
+  const plug = [
+    {
+      author: "Rebecca Bellan",
+      title: "Новостей нет",
+      description: "Попробуйте выбрать другие источники",
+      url: "",
+      urlToImage: "",
+      publishedAt: "",
+    },
+  ];
 
   //news
   const [isLoaded, setIsLoaded] = useState(false);
@@ -77,7 +84,7 @@ export const News = (props) => {
   const searchInput = useRef(null);
   const [input, setInput] = useState(undefined);
 
-  const onChange = (event, selectedDate) => {
+  const onChange = (selectedDate) => {
     const currentDate = selectedDate || new Date();
     setShow(Platform.OS === "ios");
     switch (curDate) {
@@ -109,7 +116,7 @@ export const News = (props) => {
 
   const parseDate = (date) => {
     let tmpDate = date;
-    tmpDate = tmpDate.toLocaleDateString().split("/");
+    tmpDate = tmpDate.toLocaleDateString().split(dateSeparator);
     tmpDate = `20${tmpDate[2]}-${tmpDate[0]}-${tmpDate[1]}`;
     return tmpDate;
   };
@@ -126,8 +133,8 @@ export const News = (props) => {
     country,
     apiKey,
   }) => {
-    tmpfrom = parseDate(from);
-    tmpto = parseDate(to);
+    const tmpfrom = parseDate(from);
+    const tmpto = parseDate(to);
     switch (endpoint) {
       case everything:
         if (q) {
@@ -148,6 +155,7 @@ export const News = (props) => {
     return fetch(req);
   };
 
+  //Переход по ссылки
   const OpenURLButton = ({ url, children }) => {
     const handlePress = useCallback(async () => {
       const supported = await Linking.canOpenURL(url);
@@ -162,6 +170,7 @@ export const News = (props) => {
     return <Button title={children} onPress={handlePress} />;
   };
 
+  //Карточка новости
   const NewsItem = ({ title, urlToImage, description, url, publishedAt }) => (
     <Card>
       <Card.Title>{title}</Card.Title>
@@ -177,7 +186,7 @@ export const News = (props) => {
           alignItems: "center",
         }}
       >
-        <OpenURLButton url={url}>Открыть</OpenURLButton>
+        {url ? <OpenURLButton url={url}>Открыть</OpenURLButton> : null}
         <Text>{publishedAt}</Text>
       </View>
     </Card>
@@ -193,6 +202,7 @@ export const News = (props) => {
     />
   );
 
+  //Пункт категорий
   const Item = ({ nameCategory, category }) => (
     <View style={styles.item}>
       <Button
@@ -213,6 +223,7 @@ export const News = (props) => {
 
   const visibleClass = categoriesVisible ? styles.open : styles.close;
 
+  //Получение новостей
   const getNews = async (
     endpoint = everything,
     q = "",
@@ -234,13 +245,15 @@ export const News = (props) => {
     const promisNews = createPromis(url);
     const res = await promisNews;
     const data = await res.json();
-    console.log("request status:", data.status);
-    if (data.status === "error") {
-      console.log("request message:", data.message);
+    console.log(requestStatus, data.status);
+    if (data.status === requestError) {
+      console.log(requestMessage, data.message);
+      return false;
     }
     return data;
   };
 
+  //Фильтрация по категориям
   const setNewCategory = (newCategory) => {
     categoriesClick();
     setCurCategory(newCategory);
@@ -277,6 +290,7 @@ export const News = (props) => {
     }
   };
 
+  //Функционал поиска по ключ. слову
   const searching = () => {
     setCurCategory(all);
     setPage(pageFirst);
@@ -297,6 +311,7 @@ export const News = (props) => {
     setCurEndpoint(everything);
   };
 
+  //Получение новостных источников из бд
   const getSources = () => {
     return new Promise((resolve, reject) => {
       db.findOne({ db: dbSetting }, function (err, doc) {
@@ -315,47 +330,56 @@ export const News = (props) => {
     });
   };
 
+  const [isRequest, setIsRequest] = React.useState(false);
+  
   useEffect(() => {
-    getSources().then((sources) => {
-      getNews({
-        endpoint: curEndpoint,
-        category: curCategory,
-        domains: sources,
-        from: fromDate,
-        to: toDate,
-        page: page,
-        pageSize: size,
-        country: country,
-        apiKey: key,
-      }).then((data) => {
-        setNews(data);
-        setSources(sources);
-        setIsLoaded(true);
+    if (!isRequest) {
+      setIsRequest(true);
+      getSources().then((sources) => {
+        getNews({
+          endpoint: curEndpoint,
+          category: curCategory,
+          domains: sources,
+          from: fromDate,
+          to: toDate,
+          page: page,
+          pageSize: size,
+          country: country,
+          apiKey: key,
+        }).then((data) => {
+          setNews(data);
+          setSources(sources);
+          setIsLoaded(true);
+        });
       });
-    });
+    }
   }, [isLoaded]);
 
   const [refreshing, setRefreshing] = React.useState(false);
-
-  const onRefresh = React.useCallback(() => {
+  
+  //Обновление новостей
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    getSources().then((sources) => {
-      getNews({
-        endpoint: curEndpoint,
-        category: curCategory,
-        domains: sources,
-        from: fromDate,
-        to: toDate,
-        page: page,
-        pageSize: size,
-        country: country,
-        apiKey: key,
-      }).then((data) => {
-        setNews(data);
-        setSources(sources);
-        setRefreshing(false);
+    if (!isRequest) {
+      setIsRequest(true);
+      getSources().then((sources) => {
+        getNews({
+          endpoint: curEndpoint,
+          category: curCategory,
+          domains: sources,
+          from: fromDate,
+          to: toDate,
+          page: page,
+          pageSize: size,
+          country: country,
+          apiKey: key,
+        }).then((data) => {
+          setNews(data);
+          setSources(sources);
+          setRefreshing(false);
+        });
       });
-    });
+    }
   }, [refreshing]);
 
   return (
@@ -399,14 +423,14 @@ export const News = (props) => {
           />
           <Button
             onPress={showDatepicker.bind(null, dateFrom)}
-            title={`от ${fromDate.toLocaleDateString().split("/")[1]}-${
-              fromDate.toLocaleDateString().split("/")[0]
-            }`}
+            title={`от ${
+              fromDate.toLocaleDateString().split(dateSeparator)[1]
+            }-${fromDate.toLocaleDateString().split(dateSeparator)[0]}`}
           />
           <Button
             onPress={showDatepicker.bind(null, dateTo)}
-            title={`до ${toDate.toLocaleDateString().split("/")[1]}-${
-              toDate.toLocaleDateString().split("/")[0]
+            title={`до ${toDate.toLocaleDateString().split(dateSeparator)[1]}-${
+              toDate.toLocaleDateString().split(dateSeparator)[0]
             }`}
           />
           <Button onPress={searching} title={btnSearch} />
@@ -414,10 +438,11 @@ export const News = (props) => {
       </View>
 
       <View style={styles.content}>
+        {}
         {isLoaded && news ? (
           <FlatList
             ref={newsList}
-            data={news["articles"]}
+            data={news[articles]}
             renderItem={renderNewsItem}
             keyExtractor={(item, index) => index.toString()}
             refreshControl={
@@ -451,9 +476,18 @@ export const News = (props) => {
               }
             }}
           />
+        ) : !news ? (
+          <FlatList
+            data={plug}
+            renderItem={renderNewsItem}
+            keyExtractor={(item, index) => index.toString()}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          />
         ) : (
           <View style={styles.loading}>
-            <Text>загрузка</Text>
+            <Text>Загрузка</Text>
           </View>
         )}
       </View>

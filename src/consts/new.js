@@ -51,6 +51,7 @@ export const btnSearch = "поиск";
 export const dateFrom = "from";
 export const dateTo = "to";
 export const modeDate = "date";
+export const dateSeparator = "/";
 
 //general
 export const source = "source";
@@ -62,3 +63,8 @@ export const newsUrlToImage = "urlToImage";
 export const newsDescription = "description";
 export const newsUrl = "url";
 export const newsPublishedAt = "publishedAt";
+
+//request
+export const requestStatus = "request status:";
+export const requestMessage = "request message:";
+export const requestError = "error";
