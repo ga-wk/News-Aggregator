@@ -234,7 +234,10 @@ export const News = (props) => {
     const promisNews = createPromis(url);
     const res = await promisNews;
     const data = await res.json();
-    console.log("req", data.status);
+    console.log("request status:", data.status);
+    if (data.status === "error") {
+      console.log("request message:", data.message);
+    }
     return data;
   };
 
@@ -248,7 +251,7 @@ export const News = (props) => {
       getNews({
         endpoint: everything,
         category: curCategory,
-        domains: allSources,
+        domains: sources,
         from: new Date(),
         to: new Date(),
         page: pageFirst,
@@ -283,7 +286,7 @@ export const News = (props) => {
       q: input,
       from: fromDate,
       to: toDate,
-      domains: allSources,
+      domains: sources,
       page: page,
       pageSize: size,
       country: country,
@@ -294,32 +297,41 @@ export const News = (props) => {
     setCurEndpoint(everything);
   };
 
+  const getSources = () => {
+    return new Promise((resolve, reject) => {
+      db.findOne({ db: dbSetting }, function (err, doc) {
+        if (doc !== null) {
+          const sources = [];
+          doc[dbCountries][doc[dbDefaultCountry]].forEach((el) => {
+            if (el[sourceIsEnabled]) {
+              sources.push(el[sourceName]);
+            }
+          });
+          resolve(sources);
+        } else {
+          reject();
+        }
+      });
+    });
+  };
+
   useEffect(() => {
-    db.findOne({ db: dbSetting }, function (err, doc) {
-      if (doc !== null) {
-        const tmpSources = [];
-        doc[dbCountries][doc[dbDefaultCountry]].forEach((el) => {
-          if (el[sourceIsEnabled]) {
-            tmpSources.push(el[sourceName]);
-          }
-        });
-        const promis = getNews({
-          endpoint: curEndpoint,
-          category: curCategory,
-          domains: tmpSources,
-          from: fromDate,
-          to: toDate,
-          page: page,
-          pageSize: size,
-          country: country,
-          apiKey: key,
-        });
-        promis.then((data) => {
-          setNews(data);
-          setSources(tmpSources);
-          setIsLoaded(true);
-        });
-      }
+    getSources().then((sources) => {
+      getNews({
+        endpoint: curEndpoint,
+        category: curCategory,
+        domains: sources,
+        from: fromDate,
+        to: toDate,
+        page: page,
+        pageSize: size,
+        country: country,
+        apiKey: key,
+      }).then((data) => {
+        setNews(data);
+        setSources(sources);
+        setIsLoaded(true);
+      });
     });
   }, [isLoaded]);
 
@@ -327,31 +339,22 @@ export const News = (props) => {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    db.findOne({ db: "setting" }, function (err, doc) {
-      if (doc !== null) {
-        const tmpSources = [];
-        doc["countries"][doc["defaultCountry"]].forEach((el) => {
-          if (el["isEnabled"]) {
-            tmpSources.push(el[source]);
-          }
-        });
-        const promis = getNews({
-          endpoint: curEndpoint,
-          category: curCategory,
-          domains: tmpSources,
-          from: fromDate,
-          to: toDate,
-          page: page,
-          pageSize: size,
-          country: country,
-          apiKey: key,
-        });
-        promis.then((data) => {
-          setNews(data);
-          setSources(tmpSources);
-          setRefreshing(false);
-        });
-      }
+    getSources().then((sources) => {
+      getNews({
+        endpoint: curEndpoint,
+        category: curCategory,
+        domains: sources,
+        from: fromDate,
+        to: toDate,
+        page: page,
+        pageSize: size,
+        country: country,
+        apiKey: key,
+      }).then((data) => {
+        setNews(data);
+        setSources(sources);
+        setRefreshing(false);
+      });
     });
   }, [refreshing]);
 
@@ -422,36 +425,28 @@ export const News = (props) => {
             }
             onEndReached={() => {
               if (news.totalResults > page * size) {
-                db.findOne({ db: "setting" }, function (err, doc) {
-                  if (doc !== null) {
-                    const tmpSources = [];
-                    doc["countries"][doc["defaultCountry"]].forEach((el) => {
-                      if (el["isEnabled"]) {
-                        tmpSources.push(el[source]);
-                      }
+                getSources().then((sources) => {
+                  getNews({
+                    endpoint: curEndpoint,
+                    category: curCategory,
+                    q: input,
+                    from: fromDate,
+                    to: toDate,
+                    domains: sources,
+                    page: page + 1,
+                    pageSize: size,
+                    country: country,
+                    apiKey: key,
+                  }).then((data) => {
+                    const newNews = news;
+                    newNews[articles].push(...data[articles]);
+                    setNews(newNews);
+                    setPage(page + 1);
+                    newsList.current.scrollToIndex({
+                      animated: false,
+                      index: page * 7,
                     });
-                    getNews({
-                      endpoint: curEndpoint,
-                      category: curCategory,
-                      q: input,
-                      from: fromDate,
-                      to: toDate,
-                      domains: tmpSources,
-                      page: page + 1,
-                      pageSize: size,
-                      country: country,
-                      apiKey: key,
-                    }).then((data) => {
-                      const newNews = news;
-                      newNews[articles].push(...data[articles]);
-                      setNews(newNews);
-                      setPage(page + 1);
-                      newsList.current.scrollToIndex({
-                        animated: false,
-                        index: page * 7,
-                      });
-                    });
-                  }
+                  });
                 });
               }
             }}
