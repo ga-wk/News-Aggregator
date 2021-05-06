@@ -246,6 +246,7 @@ export const News = () => {
     const res = await promisNews;
     const data = await res.json();
     console.log(requestStatus, data.status);
+    console.log('data["articles"]', data["articles"]);
     if (data.status === requestError) {
       console.log(requestMessage, data.message);
       return false;
@@ -440,8 +441,7 @@ export const News = () => {
       </View>
 
       <View style={styles.content}>
-        {}
-        {isLoaded && news ? (
+        {news && news[articles].length ? (
           <FlatList
             ref={newsList}
             data={news[articles]}
@@ -478,7 +478,7 @@ export const News = () => {
               }
             }}
           />
-        ) : !news ? (
+        ) : (
           <FlatList
             data={plug}
             renderItem={renderNewsItem}
@@ -487,11 +487,7 @@ export const News = () => {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           />
-        ) : (
-          <View style={styles.loading}>
-            <Text>Загрузка</Text>
-          </View>
-        )}
+        ) }
       </View>
     </View>
   );

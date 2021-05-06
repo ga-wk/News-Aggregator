@@ -10,6 +10,13 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { db } from "../localdb/db";
+import {
+  dbCountries,
+  dbDefaultCountry,
+  dbSetting,
+  sourceIsEnabled,
+  sourceName,
+} from "../consts/db";
 
 export const allSources = [
   "rbc.ru",
@@ -23,16 +30,16 @@ export const allSources = [
 
 export const Favorite = (props) => {
   const [sources, setSources] = useState(undefined);
-  const [setting, setSetting] = useState();
+  const [setting, setSetting] = useState('');
   const [rerender, setRerender] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) {
-      db.findOne({ db: "setting" }, function (err, doc) {
+      db.findOne({ db: dbSetting }, function (err, doc) {
         if (doc !== null) {
           setSetting(doc);
-          setSources(doc["countries"]);
+          setSources(doc[dbCountries]);
           setRerender(!rerender);
           setIsLoaded(true);
         }
@@ -43,7 +50,7 @@ export const Favorite = (props) => {
   //update
   const toggleSwitch = (value, source) => {
     let tmpSetting = setting;
-    let tmpSources = sources["ru"].map((el) => {
+    let tmpSources = sources[setting[dbDefaultCountry]].map((el) => {
       if (el.source === source) {
         return {
           source: el.source,
@@ -56,15 +63,15 @@ export const Favorite = (props) => {
       };
     });
 
-    tmpSetting["countries"][setting["defaultCountry"]] = tmpSources;
+    tmpSetting[dbCountries][setting[dbDefaultCountry]] = tmpSources;
     db.update(
-      { db: "setting" },
+      { db: dbSetting },
       tmpSetting,
       {},
       function (err, numReplaced) {}
     );
     setSetting(tmpSetting);
-    setSources(tmpSetting["countries"]);
+    setSources(tmpSetting[dbCountries]);
     setRerender(!rerender);
   };
 
@@ -75,15 +82,15 @@ export const Favorite = (props) => {
     let tmpSources = sources["ru"];
     tmpSources.push({ source: input, isEnabled: true });
 
-    tmpSetting["countries"][tmpSetting["defaultCountry"]] = tmpSources;
+    tmpSetting[dbCountries][setting[dbDefaultCountry]] = tmpSources;
     db.update(
-      { db: "setting" },
+      { db: dbSetting },
       tmpSetting,
       {},
       function (err, numReplaced) {}
     );
     setSetting(tmpSetting);
-    setSources(tmpSetting["countries"]);
+    setSources(tmpSetting[dbCountries]);
     setRerender(!rerender);
   };
 
@@ -93,14 +100,14 @@ export const Favorite = (props) => {
     let tmpSources = sources["ru"];
     tmpSources.splice(index, 1);
 
-    tmpSetting["countries"][tmpSetting["defaultCountry"]] = tmpSources;
+    tmpSetting[dbCountries][setting[dbDefaultCountry]] = tmpSources;
 
     setSetting(tmpSetting);
-    setSources(tmpSetting["countries"]);
+    setSources(tmpSetting[dbCountries]);
 
     setRerender(!rerender);
     db.update(
-      { db: "setting" },
+      { db: dbSetting },
       tmpSetting,
       {},
       function (err, numReplaced) {}
@@ -136,7 +143,7 @@ export const Favorite = (props) => {
       </View>
       {sources && isLoaded ? (
         <FlatList
-          data={sources["ru"]}
+          data={sources[setting[dbDefaultCountry]]}
           renderItem={renderItem}
           keyExtractor={(item, index) => index.toString()}
         />
