@@ -330,10 +330,10 @@ export const News = () => {
     });
   };
 
-  const [isRequest, setIsRequest] = React.useState(false);
-  
+  const [isRequest, setIsRequest] = useState(false);
+
   useEffect(() => {
-    if (!isRequest) {
+    if (!isRequest && !isLoaded) {
       setIsRequest(true);
       getSources().then((sources) => {
         getNews({
@@ -349,13 +349,14 @@ export const News = () => {
         }).then((data) => {
           setNews(data);
           setSources(sources);
+          setIsRequest(false);
           setIsLoaded(true);
         });
       });
     }
   }, [isLoaded]);
 
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   //Обновление новостей
   const onRefresh = useCallback(() => {
@@ -376,6 +377,7 @@ export const News = () => {
         }).then((data) => {
           setNews(data);
           setSources(sources);
+          setIsRequest(false);
           setRefreshing(false);
         });
       });
