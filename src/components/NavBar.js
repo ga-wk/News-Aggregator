@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View, Button } from "react-native";
+import { btnMenu } from "../consts/navBar";
 
 export const NavBar = (props) => {
   const menuClick = (e) => {
@@ -8,7 +9,7 @@ export const NavBar = (props) => {
 
   return (
     <View style={styles.container}>
-      <Button style={[styles.btn]} title={"Menu"} onPress={menuClick} />
+      <Button style={[styles.btn]} title={btnMenu} onPress={menuClick} />
       <Text style={styles.text}>{props.screen}</Text>
     </View>
   );

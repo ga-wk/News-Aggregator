@@ -10,7 +10,8 @@ export const general = "general";
 export const health = "health";
 export const science = "science";
 export const technology = "technology";
-export const all = "all"
+export const all = "all";
+
 export const categories = [
   {
     nameCategory: "Бизнес",
@@ -42,7 +43,22 @@ export const categories = [
   },
 ];
 
-
 // btns
+export const btnCategories = "Категории";
+export const btnSearch = "поиск";
 
-export const btnCategories = "Категории"
+//date
+export const dateFrom = "from";
+export const dateTo = "to";
+export const modeDate = "date";
+
+//general
+export const source = "source";
+export const articles = "articles";
+
+//NewsItem
+export const newsTitle = "title";
+export const newsUrlToImage = "urlToImage";
+export const newsDescription = "description";
+export const newsUrl = "url";
+export const newsPublishedAt = "publishedAt";

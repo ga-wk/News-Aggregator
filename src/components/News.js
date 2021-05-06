@@ -10,7 +10,7 @@ import {
   Linking,
   RefreshControl,
   SafeAreaView,
-  ScrollView
+  ScrollView,
 } from "react-native";
 import { Card } from "react-native-elements";
 import {
@@ -21,10 +21,28 @@ import {
   general,
   all,
   btnCategories,
-} from "../strings/stringNew";
-import { key, allSources } from "../strings/public";
+  dateFrom,
+  dateTo,
+  source,
+  btnSearch,
+  modeDate,
+  newsUrlToImage,
+  newsDescription,
+  newsUrl,
+  newsPublishedAt,
+  articles,
+  newsTitle,
+} from "../consts/new";
+import { key, allSources } from "../consts/public";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { db } from "../localdb/db";
+import {
+  dbCountries,
+  dbDefaultCountry,
+  dbSetting,
+  sourceIsEnabled,
+  sourceName,
+} from "../consts/db";
 
 const wait = (timeout) => {
   return new Promise((resolve) => setTimeout(resolve, timeout));
@@ -42,7 +60,6 @@ export const News = (props) => {
 
   //news
   const [isLoaded, setIsLoaded] = useState(false);
-  const [rerender, setRerender] = useState(true);
   const [news, setNews] = useState(false);
   const [page, setPage] = useState(pageFirst);
   const [curCategory, setCurCategory] = useState(all);
@@ -53,7 +70,7 @@ export const News = (props) => {
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
   const [curDate, setCurDate] = useState("");
-  const [mode, setMode] = useState("date");
+  const [mode, setMode] = useState(modeDate);
   const [show, setShow] = useState(false);
 
   //search
@@ -64,10 +81,10 @@ export const News = (props) => {
     const currentDate = selectedDate || new Date();
     setShow(Platform.OS === "ios");
     switch (curDate) {
-      case "from":
+      case dateFrom:
         setFromDate(currentDate);
         break;
-      case "to":
+      case dateTo:
         setToDate(currentDate);
         break;
     }
@@ -80,14 +97,21 @@ export const News = (props) => {
 
   const showDatepicker = (date) => {
     switch (date) {
-      case "from":
-        setCurDate("from");
+      case dateFrom:
+        setCurDate(dateFrom);
         break;
-      case "to":
-        setCurDate("to");
+      case dateTo:
+        setCurDate(dateTo);
         break;
     }
-    showMode("date");
+    showMode(modeDate);
+  };
+
+  const parseDate = (date) => {
+    let tmpDate = date;
+    tmpDate = tmpDate.toLocaleDateString().split("/");
+    tmpDate = `20${tmpDate[2]}-${tmpDate[0]}-${tmpDate[1]}`;
+    return tmpDate;
   };
 
   const createUrl = ({
@@ -102,12 +126,8 @@ export const News = (props) => {
     country,
     apiKey,
   }) => {
-    tmpfrom = from.toLocaleDateString().split("/");
-    tmpfrom = `20${tmpfrom[2]}-${tmpfrom[0]}-${tmpfrom[1]}`;
-    tmpto = to.toLocaleDateString().split("/");
-    tmpto = `20${tmpto[2]}-${tmpto[0]}-${tmpto[1]}`;
-
-    console.log("from", from, "to", to);
+    tmpfrom = parseDate(from);
+    tmpto = parseDate(to);
     switch (endpoint) {
       case everything:
         if (q) {
@@ -130,12 +150,9 @@ export const News = (props) => {
 
   const OpenURLButton = ({ url, children }) => {
     const handlePress = useCallback(async () => {
-      // Checking if the link is supported for links with custom URL scheme.
       const supported = await Linking.canOpenURL(url);
 
       if (supported) {
-        // Opening the link with some app, if the URL scheme is "http" the web link should be opened
-        // by some browser in the mobile
         await Linking.openURL(url);
       } else {
         Alert.alert(`Don't know how to open this URL: ${url}`);
@@ -168,11 +185,11 @@ export const News = (props) => {
 
   const renderNewsItem = ({ item }) => (
     <NewsItem
-      title={item["title"]}
-      urlToImage={item["urlToImage"]}
-      description={item["description"]}
-      url={item["url"]}
-      publishedAt={item["publishedAt"]}
+      title={item[newsTitle]}
+      urlToImage={item[newsUrlToImage]}
+      description={item[newsDescription]}
+      url={item[newsUrl]}
+      publishedAt={item[newsPublishedAt]}
     />
   );
 
@@ -203,7 +220,7 @@ export const News = (props) => {
     page = 1,
     pageSize = 10,
     country = "ru",
-    apiKey = key
+    apiKey = key,
   ) => {
     const url = createUrl(
       endpoint,
@@ -212,7 +229,7 @@ export const News = (props) => {
       page,
       pageSize,
       country,
-      apiKey
+      apiKey,
     );
     const promisNews = createPromis(url);
     const res = await promisNews;
@@ -227,7 +244,7 @@ export const News = (props) => {
     setPage(pageFirst);
     setInput(undefined);
 
-    if (newCategory === "all") {
+    if (newCategory === all) {
       getNews({
         endpoint: everything,
         category: curCategory,
@@ -272,19 +289,18 @@ export const News = (props) => {
       country: country,
       apiKey: key,
     }).then((data) => {
-      // console.log(data);
       setNews(data);
     });
     setCurEndpoint(everything);
   };
 
   useEffect(() => {
-    db.findOne({ db: "setting" }, function (err, doc) {
+    db.findOne({ db: dbSetting }, function (err, doc) {
       if (doc !== null) {
         const tmpSources = [];
-        doc["countries"][doc["defaultCountry"]].forEach((el) => {
-          if (el["isEnabled"]) {
-            tmpSources.push(el["source"]);
+        doc[dbCountries][doc[dbDefaultCountry]].forEach((el) => {
+          if (el[sourceIsEnabled]) {
+            tmpSources.push(el[sourceName]);
           }
         });
         const promis = getNews({
@@ -299,7 +315,7 @@ export const News = (props) => {
           apiKey: key,
         });
         promis.then((data) => {
-          setNews(data)
+          setNews(data);
           setSources(tmpSources);
           setIsLoaded(true);
         });
@@ -316,7 +332,7 @@ export const News = (props) => {
         const tmpSources = [];
         doc["countries"][doc["defaultCountry"]].forEach((el) => {
           if (el["isEnabled"]) {
-            tmpSources.push(el["source"]);
+            tmpSources.push(el[source]);
           }
         });
         const promis = getNews({
@@ -331,7 +347,7 @@ export const News = (props) => {
           apiKey: key,
         });
         promis.then((data) => {
-          setNews(data)
+          setNews(data);
           setSources(tmpSources);
           setRefreshing(false);
         });
@@ -352,8 +368,7 @@ export const News = (props) => {
 
       {show && (
         <DateTimePicker
-          testID="dateTimePicker"
-          value={curDate === "from" ? fromDate : toDate}
+          value={curDate === dateFrom ? fromDate : toDate}
           mode={mode}
           is24Hour={true}
           display="default"
@@ -380,18 +395,18 @@ export const News = (props) => {
             style={styles.searchInput}
           />
           <Button
-            onPress={showDatepicker.bind(null, "from")}
+            onPress={showDatepicker.bind(null, dateFrom)}
             title={`от ${fromDate.toLocaleDateString().split("/")[1]}-${
               fromDate.toLocaleDateString().split("/")[0]
             }`}
           />
           <Button
-            onPress={showDatepicker.bind(null, "to")}
+            onPress={showDatepicker.bind(null, dateTo)}
             title={`до ${toDate.toLocaleDateString().split("/")[1]}-${
               toDate.toLocaleDateString().split("/")[0]
             }`}
           />
-          <Button onPress={searching} title={"поиск"} />
+          <Button onPress={searching} title={btnSearch} />
         </View>
       </View>
 
@@ -407,26 +422,36 @@ export const News = (props) => {
             }
             onEndReached={() => {
               if (news.totalResults > page * size) {
-                getNews({
-                  endpoint: curEndpoint,
-                  category: curCategory,
-                  q: input,
-                  from: fromDate,
-                  to: toDate,
-                  domains: allSources,
-                  page: page + 1,
-                  pageSize: size,
-                  country: country,
-                  apiKey: key,
-                }).then((data) => {
-                  const newNews = news;
-                  newNews["articles"].push(...data["articles"]);
-                  setNews(newNews);
-                  setPage(page + 1);
-                  newsList.current.scrollToIndex({
-                    animated: false,
-                    index: page * 7,
-                  });
+                db.findOne({ db: "setting" }, function (err, doc) {
+                  if (doc !== null) {
+                    const tmpSources = [];
+                    doc["countries"][doc["defaultCountry"]].forEach((el) => {
+                      if (el["isEnabled"]) {
+                        tmpSources.push(el[source]);
+                      }
+                    });
+                    getNews({
+                      endpoint: curEndpoint,
+                      category: curCategory,
+                      q: input,
+                      from: fromDate,
+                      to: toDate,
+                      domains: tmpSources,
+                      page: page + 1,
+                      pageSize: size,
+                      country: country,
+                      apiKey: key,
+                    }).then((data) => {
+                      const newNews = news;
+                      newNews[articles].push(...data[articles]);
+                      setNews(newNews);
+                      setPage(page + 1);
+                      newsList.current.scrollToIndex({
+                        animated: false,
+                        index: page * 7,
+                      });
+                    });
+                  }
                 });
               }
             }}
