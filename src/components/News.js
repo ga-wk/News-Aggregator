@@ -51,7 +51,7 @@ export const News = () => {
   //пока так
   const pageFirst = 1;
   const size = 10;
-  const country = "ru";
+  const [country, setCountry] = useState(false);
 
   //заглушка
   const plug = [
@@ -138,9 +138,9 @@ export const News = () => {
     switch (endpoint) {
       case everything:
         if (q) {
-          return `https://newsapi.org/v2/${everything}?q=${q}&from=${tmpfrom}to=${tmpto}&domains=${domains}&page=${page}&pageSize=${pageSize}&language=${country}&apiKey=${apiKey}`;
+          return `https://newsapi.org/v2/${everything}?q=${q}&from=${tmpfrom}to=${tmpto}&domains=${domains}&page=${page}&pageSize=${pageSize}&apiKey=${apiKey}`;
         }
-        return `https://newsapi.org/v2/${everything}?q=&from=${from.toUTCString()}to=${to.toUTCString()}&domains=${domains}&page=${page}&pageSize=${pageSize}&language=${country}&apiKey=${apiKey}`;
+        return `https://newsapi.org/v2/${everything}?q=&from=${from.toUTCString()}to=${to.toUTCString()}&domains=${domains}&page=${page}&pageSize=${pageSize}&apiKey=${apiKey}`;
       case topHeadlines:
         return `https://newsapi.org/v2/${topHeadlines}?category=${category}&page=${page}&pageSize=${pageSize}&country=${country}&apiKey=${apiKey}`;
       case sources:
@@ -175,7 +175,14 @@ export const News = () => {
     <Card>
       <Card.Title>{title}</Card.Title>
       <Card.Divider />
-      <Card.Image source={{ uri: urlToImage }} />
+
+      <Card.Image
+        source={{
+          uri: urlToImage
+            ? urlToImage
+            : "https://image.shutterstock.com/image-vector/vector-electric-plug-socket-unplugged-260nw-1188619804.jpg",
+        }}
+      />
       <Card.Divider />
       <Text style={{ marginBottom: 10 }}>{description}</Text>
       <Card.Divider />
@@ -230,7 +237,7 @@ export const News = () => {
     category = general,
     page = 1,
     pageSize = 10,
-    country = "ru",
+    country ,
     apiKey = key,
   ) => {
     const url = createUrl(
@@ -242,11 +249,13 @@ export const News = () => {
       country,
       apiKey,
     );
+
+    console.log(url)
     const promisNews = createPromis(url);
     const res = await promisNews;
     const data = await res.json();
     console.log(requestStatus, data.status);
-    // console.log('data["articles"]', data["articles"]);
+    console.log("data", data);
     if (data.status === requestError) {
       console.log(requestMessage, data.message);
       return false;
@@ -318,12 +327,16 @@ export const News = () => {
       db.findOne({ db: dbSetting }, function (err, doc) {
         if (doc !== null) {
           const sources = [];
+
           doc[dbCountries][doc[dbDefaultCountry]].forEach((el) => {
             if (el[sourceIsEnabled]) {
               sources.push(el[sourceName]);
             }
           });
-          resolve(sources);
+          console.log(doc[dbDefaultCountry]);
+          console.log(sources);
+          setCountry(doc[dbDefaultCountry]);
+          resolve({ sources: sources, country: doc[dbDefaultCountry] });
         } else {
           reject();
         }
@@ -336,7 +349,7 @@ export const News = () => {
   useEffect(() => {
     if (!isRequest && !isLoaded) {
       setIsRequest(true);
-      getSources().then((sources) => {
+      getSources().then(({ sources, country }) => {
         getNews({
           endpoint: curEndpoint,
           category: curCategory,
@@ -350,6 +363,7 @@ export const News = () => {
         }).then((data) => {
           setNews(data);
           setSources(sources);
+          setCountry(country);
           setIsRequest(false);
           setIsLoaded(true);
         });
@@ -358,13 +372,13 @@ export const News = () => {
   }, [isLoaded]);
 
   const [refreshing, setRefreshing] = useState(false);
-  
+
   //Обновление новостей
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     if (!isRequest) {
       setIsRequest(true);
-      getSources().then((sources) => {
+      getSources().then(({ sources, country }) => {
         getNews({
           endpoint: curEndpoint,
           category: curCategory,
@@ -378,6 +392,7 @@ export const News = () => {
         }).then((data) => {
           setNews(data);
           setSources(sources);
+          setCountry(country);
           setIsRequest(false);
           setRefreshing(false);
         });
@@ -487,7 +502,7 @@ export const News = () => {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           />
-        ) }
+        )}
       </View>
     </View>
   );
