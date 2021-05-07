@@ -71,7 +71,7 @@ export const Index = () => {
 
   return (
     <NavigationContainer>
-      <Drawer.Navigator initialRouteName="Новости">
+      <Drawer.Navigator initialRouteName="Страны">
         <Drawer.Screen name="Новости" component={NewsScreen} />
         <Drawer.Screen name="Избранные" component={FavoriteScreen} />
         <Drawer.Screen name="Страны" component={CountriesScreen} />
