@@ -246,7 +246,7 @@ export const News = () => {
     const res = await promisNews;
     const data = await res.json();
     console.log(requestStatus, data.status);
-    console.log('data["articles"]', data["articles"]);
+    // console.log('data["articles"]', data["articles"]);
     if (data.status === requestError) {
       console.log(requestMessage, data.message);
       return false;

@@ -6,6 +6,7 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import { NavigationContainer } from "@react-navigation/native";
 import { FavoriteScreen } from "./screens/FavoriteScreen";
 import { NewsScreen } from "./screens/NewsScreen";
+import { CountriesScreen } from './screens/CountriesScreen'
 import { db } from "./localdb/db";
 const Drawer = createDrawerNavigator();
 
@@ -73,6 +74,7 @@ export const Index = () => {
       <Drawer.Navigator initialRouteName="Новости">
         <Drawer.Screen name="Новости" component={NewsScreen} />
         <Drawer.Screen name="Избранные" component={FavoriteScreen} />
+        <Drawer.Screen name="Страны" component={CountriesScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );
