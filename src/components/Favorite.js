@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,8 +8,9 @@ import {
   TextInput,
   Button,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { db } from "../localdb/db";
+import { db, resetDB } from "../localdb/db";
 import {
   dbCountries,
   dbDefaultCountry,
@@ -18,19 +19,9 @@ import {
   sourceName,
 } from "../consts/db";
 
-export const allSources = [
-  "rbc.ru",
-  "news.google.com",
-  "lenta.ru",
-  "russian.rt.com",
-  "www.rbc.ru",
-  "meduza.io",
-  "tvrain.ru",
-];
-
 export const Favorite = (props) => {
-  const [sources, setSources] = useState(undefined);
-  const [setting, setSetting] = useState('');
+  const [sources, setSources] = useState({});
+  const [setting, setSetting] = useState("");
   const [rerender, setRerender] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -40,7 +31,6 @@ export const Favorite = (props) => {
         if (doc !== null) {
           setSetting(doc);
           setSources(doc[dbCountries]);
-          setRerender(!rerender);
           setIsLoaded(true);
         }
       });
@@ -50,6 +40,7 @@ export const Favorite = (props) => {
   //update
   const toggleSwitch = (value, source) => {
     let tmpSetting = setting;
+
     let tmpSources = sources[setting[dbDefaultCountry]].map((el) => {
       if (el.source === source) {
         return {
@@ -68,7 +59,7 @@ export const Favorite = (props) => {
       { db: dbSetting },
       tmpSetting,
       {},
-      function (err, numReplaced) {}
+      function (err, numReplaced) {},
     );
     setSetting(tmpSetting);
     setSources(tmpSetting[dbCountries]);
@@ -87,7 +78,7 @@ export const Favorite = (props) => {
       { db: dbSetting },
       tmpSetting,
       {},
-      function (err, numReplaced) {}
+      function (err, numReplaced) {},
     );
     setSetting(tmpSetting);
     setSources(tmpSetting[dbCountries]);
@@ -110,28 +101,54 @@ export const Favorite = (props) => {
       { db: dbSetting },
       tmpSetting,
       {},
-      function (err, numReplaced) {}
+      function (err, numReplaced) {},
     );
   };
 
   const Item = ({ source, isEnabled, index }) => (
     <View style={styles.item}>
       <Text style={styles.text}>{source}</Text>
-      <Switch
-        trackColor={{ false: "#767577", true: "#81b0ff" }}
-        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
-        ios_backgroundColor="#3e3e3e"
-        onValueChange={(value) => toggleSwitch.apply(null, [value, source])}
-        value={isEnabled}
-      />
-      <Button onPress={removeSource.bind(null, index)} title={"Удалить"} />
+      {isEnabled !== "error" ? (
+        <Switch
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={(value) => toggleSwitch.apply(null, [value, source])}
+          value={isEnabled}
+        />
+      ) : null}
+      {isEnabled !== "error" ? (
+        <Button onPress={removeSource.bind(null, index)} title={"Удалить"} />
+      ) : null}
     </View>
   );
 
-  const renderItem = ({ item, index }) => (
-    <Item index={index} source={item.source} isEnabled={item.isEnabled} />
-  );
+  const renderItem = ({ item, index }) => {
+    console.log("sources", sources[setting[dbDefaultCountry]]);
+    return (
+      <Item index={index} source={item.source} isEnabled={item.isEnabled} />
+    );
+  };
+  const [refreshing, setRefreshing] = useState(false);
+  //Обновление новостей
+  const onRefresh = useCallback(() => {
+    console.log("refresh");
+    setRefreshing(true);
 
+    db.findOne({ db: dbSetting }, function (err, doc) {
+      if (doc !== null) {
+        setSetting(doc);
+        setSources(doc[dbCountries]);
+      }
+      setRefreshing(false);
+    });
+  }, [refreshing]);
+  const plug = [
+    {
+      source: "источников нет, выберете другую страну",
+      isEnabled: "error",
+    },
+  ];
   return (
     <View style={styles.container}>
       <View style={styles.addForm}>
@@ -141,14 +158,27 @@ export const Favorite = (props) => {
         />
         <Button onPress={addSource} title={"Добавить"} />
       </View>
-      {sources && isLoaded ? (
+      {isLoaded &&
+      sources &&
+      setting &&
+      sources[setting[dbDefaultCountry]].length ? (
         <FlatList
           data={sources[setting[dbDefaultCountry]]}
           renderItem={renderItem}
           keyExtractor={(item, index) => index.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       ) : (
-        <ActivityIndicator />
+        <FlatList
+          data={plug}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
       )}
     </View>
   );

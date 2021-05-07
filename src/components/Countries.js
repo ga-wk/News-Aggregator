@@ -10,10 +10,15 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-import MapView, { Marker} from "react-native-maps";
+import MapView, { Marker } from "react-native-maps";
 import { Picker } from "@react-native-picker/picker";
 import { db } from "../localdb/db";
 import { dbCountries, dbDefaultCountry, dbSetting } from "../consts/db";
+import { categories } from "../consts/new";
+import { key } from "../consts/public";
+
+import URL from "url";
+
 export const Countries = () => {
   const [selectedCountry, setSelectedCountry] = useState("");
 
@@ -76,28 +81,66 @@ export const Countries = () => {
     fr: { name: "France", latitude: 48.80419, longitude: 2.28745 },
   };
 
- 
   const RenderMarkers = () => {
     const markers = [];
     let index = 0;
     for (let region in regions) {
-      markers.push(<Marker
-        key={index}
-        coordinate={{
-          latitude: regions[region].latitude,
-          longitude: regions[region].longitude,
-        }}
-        title={regions[region].name}
-      />);
-      index++
+      markers.push(
+        <Marker
+          key={index}
+          coordinate={{
+            latitude: regions[region].latitude,
+            longitude: regions[region].longitude,
+          }}
+          title={regions[region].name}
+        />,
+      );
+      index++;
     }
 
     return markers;
   };
+
   const [region, setRegion] = useState("false");
   const [isLoaded, setIsLoaded] = useState(false);
-  const [rerender, setRerender] = useState(false);
   const [setting, setSetting] = useState({});
+
+  //update
+  const switchCountry = (country) => {
+      console.log(country)
+    let url = `https://newsapi.org/v2/sources?country=${country}&apiKey=${key}`;
+    const req = new Request(url);
+    fetch(req)
+      .then((res) => res.json())
+      .then((data) => {
+        let sources = [];
+        for (let i = 0; i < data["sources"].length; i++) {
+
+          let hostName = URL.parse((data["sources"][i]["url"]),false,true)["hostname"];
+        //   console.log(hostName)
+          sources.push({
+            source: hostName,
+            isEnabled: true,
+          });
+        }
+        return sources;
+      })
+      .then((sources) => {
+        let tmpSetting = setting;
+        tmpSetting[dbDefaultCountry] = country;
+        tmpSetting[dbCountries][country] = sources.filter(
+          (v, i, a) =>
+            a.findIndex((t) => JSON.stringify(t) === JSON.stringify(v)) === i,
+        );
+
+        db.update(
+          { db: dbSetting },
+          tmpSetting,
+          {},
+          function (err, numReplaced) {},
+        );
+      });
+  };
 
   const onRegionChange = (country) => {
     setRegion({
@@ -111,12 +154,14 @@ export const Countries = () => {
     if (!isLoaded) {
       db.findOne({ db: dbSetting }, function (err, doc) {
         if (doc !== null) {
+            console.log(doc[dbDefaultCountry])
           setSetting(doc);
           setRegion({
             ...regions[doc[dbDefaultCountry]],
             latitudeDelta: 0.0922,
             longitudeDelta: 0.0421,
           });
+          setSelectedCountry(doc[dbDefaultCountry])
           setIsLoaded(true);
         }
       });
@@ -138,6 +183,7 @@ export const Countries = () => {
           onValueChange={(itemValue, itemIndex) => {
             setSelectedCountry(itemValue);
             onRegionChange(itemValue);
+            switchCountry(itemValue);
           }}
         >
           <Picker.Item label="Россия" value="ru" />
@@ -159,7 +205,7 @@ export const Countries = () => {
         </Picker>
 
         <MapView style={styles.map} region={region}>
-          <RenderMarkers/>
+          <RenderMarkers />
         </MapView>
       </View>
     );
