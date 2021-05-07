@@ -10,66 +10,160 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-import MapView from "react-native-maps";
+import MapView, { Marker} from "react-native-maps";
 import { Picker } from "@react-native-picker/picker";
+import { db } from "../localdb/db";
+import { dbCountries, dbDefaultCountry, dbSetting } from "../consts/db";
 export const Countries = () => {
   const [selectedCountry, setSelectedCountry] = useState("");
 
-  const region = {
-    ru: { latitude: 55.746513383602625, longitude: 37.61064077788447 },
-    ae: { latitude: 25.20243, longitude: 55.27132 },
-    ar: { latitude: -34.60987001878505, longitude: -58.441540368303 },
-    at: { latitude: 48.2023, longitude: 16.34915 },
-    au: { latitude: -35.30942, longitude: 149.12497 },
-    be: { latitude: 50.84037635520694, longitude: 4.350317002982715 },
-    bg: { latitude: 42.71156089044351, longitude: 23.332995989077563 },
-    br: { latitude: -15.784771523163393, longitude: -47.85510597043906 },
-    ca: { latitude: 45.42341719959744, longitude: -75.7291218238505 },
-    ch: { latitude: 46.9504, longitude: 7.45468 },
-    cn: { latitude: 39.85785, longitude: 116.37073 },
-    co: { latitude: 4.719303823324279, longitude: -74.03776810056404 },
-    cu: { latitude: 23.085956697877286, longitude: -82.34561924656916 },
-    de: { latitude: 52.47627, longitude: 13.3724 },
-    eg: { latitude: 30.06064510668068, longitude: 31.194036647794377 },
-    fr: { latitude: 48.80419, longitude: 2.28745 },
+  const regions = {
+    ru: {
+      name: "Россия",
+      latitude: 55.746513383602625,
+      longitude: 37.61064077788447,
+    },
+    ae: {
+      name: "الإمارات العربية المتحدة‎",
+      latitude: 25.20243,
+      longitude: 55.27132,
+    },
+    ar: {
+      name: "Argentina",
+      latitude: -34.60987001878505,
+      longitude: -58.441540368303,
+    },
+    at: { name: "Österreich", latitude: 48.2023, longitude: 16.34915 },
+    au: { name: "Australia", latitude: -35.30942, longitude: 149.12497 },
+    be: {
+      name: "België",
+      latitude: 50.84037635520694,
+      longitude: 4.350317002982715,
+    },
+    bg: {
+      name: "България",
+      latitude: 42.71156089044351,
+      longitude: 23.332995989077563,
+    },
+    br: {
+      name: "Brasil",
+      latitude: -15.784771523163393,
+      longitude: -47.85510597043906,
+    },
+    ca: {
+      name: "Canada",
+      latitude: 45.42341719959744,
+      longitude: -75.7291218238505,
+    },
+    ch: { name: "Schweiz", latitude: 46.9504, longitude: 7.45468 },
+    cn: { name: "中華", latitude: 39.85785, longitude: 116.37073 },
+    co: {
+      name: "Colombia",
+      latitude: 4.719303823324279,
+      longitude: -74.03776810056404,
+    },
+    cu: {
+      name: "Cuba",
+      latitude: 23.085956697877286,
+      longitude: -82.34561924656916,
+    },
+    de: { name: "Deutschland", latitude: 52.47627, longitude: 13.3724 },
+    eg: {
+      name: "مصر‎",
+      latitude: 30.06064510668068,
+      longitude: 31.194036647794377,
+    },
+    fr: { name: "France", latitude: 48.80419, longitude: 2.28745 },
   };
 
-  return (
-    <View style={styles.container}>
-      <Picker
-        style={styles.picker}
-        selectedValue={selectedCountry}
-        onValueChange={(itemValue, itemIndex) => setSelectedCountry(itemValue)}
-      >
-        <Picker.Item label="Россия" value="ru" />
-        <Picker.Item label="الإمارات العربية المتحدة‎" value="ae" />
-        <Picker.Item label="Argentina" value="ar" />
-        <Picker.Item label="Österreich" value="at" />
-        <Picker.Item label="Australia" value="au" />
-        <Picker.Item label="België" value="be" />
-        <Picker.Item label="България" value="bg" />
-        <Picker.Item label="Brasil" value="br" />
-        <Picker.Item label="Canada" value="ca" />
-        <Picker.Item label="die Schweiz" value="ch" />
-        <Picker.Item label="中華人民共和國" value="cn" />
-        <Picker.Item label="Colombia" value="co" />
-        <Picker.Item label="Cuba" value="cu" />
-        <Picker.Item label="Deutschland" value="de" />
-        <Picker.Item label="مصر‎ " value="eg" />
-        <Picker.Item label="France" value="fr" />
-      </Picker>
-
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: 55.746513383602625,
-          longitude: 37.61064077788447,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
+ 
+  const RenderMarkers = () => {
+    const markers = [];
+    let index = 0;
+    for (let region in regions) {
+      markers.push(<Marker
+        key={index}
+        coordinate={{
+          latitude: regions[region].latitude,
+          longitude: regions[region].longitude,
         }}
-      />
-    </View>
-  );
+        title={regions[region].name}
+      />);
+      index++
+    }
+
+    return markers;
+  };
+  const [region, setRegion] = useState("false");
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [rerender, setRerender] = useState(false);
+  const [setting, setSetting] = useState({});
+
+  const onRegionChange = (country) => {
+    setRegion({
+      ...regions[country],
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+  };
+
+  useEffect(() => {
+    if (!isLoaded) {
+      db.findOne({ db: dbSetting }, function (err, doc) {
+        if (doc !== null) {
+          setSetting(doc);
+          setRegion({
+            ...regions[doc[dbDefaultCountry]],
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          });
+          setIsLoaded(true);
+        }
+      });
+    }
+  }, [isLoaded]);
+
+  if (!isLoaded) {
+    return (
+      <View style={styles.container}>
+        <Text>Загрузка</Text>
+      </View>
+    );
+  } else {
+    return (
+      <View style={styles.container}>
+        <Picker
+          style={styles.picker}
+          selectedValue={selectedCountry}
+          onValueChange={(itemValue, itemIndex) => {
+            setSelectedCountry(itemValue);
+            onRegionChange(itemValue);
+          }}
+        >
+          <Picker.Item label="Россия" value="ru" />
+          <Picker.Item label="الإمارات العربية المتحدة‎" value="ae" />
+          <Picker.Item label="Argentina" value="ar" />
+          <Picker.Item label="Österreich" value="at" />
+          <Picker.Item label="Australia" value="au" />
+          <Picker.Item label="België" value="be" />
+          <Picker.Item label="България" value="bg" />
+          <Picker.Item label="Brasil" value="br" />
+          <Picker.Item label="Canada" value="ca" />
+          <Picker.Item label="Schweiz" value="ch" />
+          <Picker.Item label="中華" value="cn" />
+          <Picker.Item label="Colombia" value="co" />
+          <Picker.Item label="Cuba" value="cu" />
+          <Picker.Item label="Deutschland" value="de" />
+          <Picker.Item label="مصر‎ " value="eg" />
+          <Picker.Item label="France" value="fr" />
+        </Picker>
+
+        <MapView style={styles.map} region={region}>
+          <RenderMarkers/>
+        </MapView>
+      </View>
+    );
+  }
 };
 
 const styles = StyleSheet.create({
